@@ -1,4 +1,3 @@
-import Joi from "@hapi/joi";
 import { User } from "../../models/user.model";
 import {
   registerValidation,
@@ -73,16 +72,15 @@ export const login = async (req, res) => {
     { _id: user._id },
     process.env.ACCESS_TOKEN_SECRET,
     {
-      expiresIn: "15s"
+      expiresIn: "5m"
     }
   );
 
   //generate refresh token
   const refreshToken = jwt.sign(
     { _id: user._id },
-    process.env.ACCESS_TOKEN_SECRET
+    process.env.REFRESH_TOKEN_SECRET
   );
-
 
   try {
     await RefreshToken.findOneAndUpdate(
@@ -91,7 +89,49 @@ export const login = async (req, res) => {
       { upsert: true }
     );
   } catch (error) {
-    res.sendStatus(500)
+    res.sendStatus(500);
   }
   res.json({ accessToken, refreshToken });
+};
+
+export const logout = async (req, res) => {
+  const userId = req.user._id;
+  try {
+    await RefreshToken.findOneAndRemove({ userId });
+    res.json({ msg: "Logged out successfully" });
+  } catch (err) {
+    res.sendStatus(500);
+  }
+};
+
+export const refresh = async (req, res) => {
+  //check for refresh token in request
+  const refreshToken = req.body.token;
+  if (!refreshToken) return res.sendStatus(401);
+
+  let userId = undefined;
+
+  try {
+    const verified = jwt.verify(refreshToken, process.env.REFRESH_TOKEN_SECRET);
+    userId = verified._id;
+  } catch (err) {
+    return res.sendStatus(403);
+  }
+
+  try {
+    const tokenDB = await RefreshToken.findOne({ userId });
+    if (tokenDB.token !== refreshToken) return res.sendStatus(401);
+
+    const newToken = jwt.sign(
+      { _id: userId },
+      process.env.ACCESS_TOKEN_SECRET,
+      { expiresIn: "5m" }
+    );
+
+    res.json({
+      accessToken: newToken
+    });
+  } catch (error) {
+    res.sendStatus(401);
+  }
 };
