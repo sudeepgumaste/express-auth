@@ -6,6 +6,7 @@ import {
 } from "../../utils/validation/user.validation";
 import jwt from "jsonwebtoken";
 import bcrypt from "bcrypt";
+import { RefreshToken } from "../../models/refreshtoken.model";
 
 export const register = async (req, res) => {
   // res.json({ msg: "Reginster" });
@@ -67,6 +68,30 @@ export const login = async (req, res) => {
     return res.status(400).json({ msg: "Email and Password pair don't match" });
   }
 
-  const token = jwt.sign({ _id: user._id }, process.env.TOKEN_SECRET);
-  res.header("auth-token", token).json({ msg: "Logged in" });
+  //generate auth token
+  const accessToken = jwt.sign(
+    { _id: user._id },
+    process.env.ACCESS_TOKEN_SECRET,
+    {
+      expiresIn: "15s"
+    }
+  );
+
+  //generate refresh token
+  const refreshToken = jwt.sign(
+    { _id: user._id },
+    process.env.ACCESS_TOKEN_SECRET
+  );
+
+
+  try {
+    await RefreshToken.findOneAndUpdate(
+      { userId: user._id },
+      { token: refreshToken },
+      { upsert: true }
+    );
+  } catch (error) {
+    res.sendStatus(500)
+  }
+  res.json({ accessToken, refreshToken });
 };
