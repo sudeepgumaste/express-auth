@@ -98,7 +98,7 @@ export const logout = async (req, res) => {
   const userId = req.user._id;
   try {
     await RefreshToken.findOneAndRemove({ userId });
-    res.json({ msg: "Logged out successfully" });
+    res.sendStatus(204);
   } catch (err) {
     res.sendStatus(500);
   }
