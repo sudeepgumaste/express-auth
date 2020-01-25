@@ -3,10 +3,13 @@ import {
   registerValidation,
   loginValidation
 } from "../../utils/validation/user.validation";
-import jwt from "jsonwebtoken";
+import jwt, { verify } from "jsonwebtoken";
 import bcrypt from "bcrypt";
 import { RefreshToken } from "../../models/refreshtoken.model";
 
+import {sendMail} from '../../utils/mail/sendMail';
+
+//registration route
 export const register = async (req, res) => {
   // res.json({ msg: "Reginster" });
 
@@ -24,27 +27,65 @@ export const register = async (req, res) => {
       return res.status(400).json({ msg: "Email already exists" });
     }
   } catch (err) {
-    console.log(err);
+    return res.sendStatus(500)
   }
 
   //hash passwords
   const salt = await bcrypt.genSalt(10);
   const hashedPassword = await bcrypt.hash(req.body.password, salt);
 
-  const user = new User({
-    name: req.body.name,
-    email: req.body.email,
-    password: hashedPassword
-  });
+  //create an verify token to mail to users
+  const verifyToken = jwt.sign(
+    {
+      name: req.body.name,
+      email: req.body.email,
+      password: hashedPassword
+    },
+    process.env.VERIFY_TOKEN_SECRET,
+    {
+      expiresIn: "15m"
+    }
+  );
+
+  //mail the token to user
+  sendMail(req.body.email,'Verify your account', `<a href="http://127.0.0.1:3000/api/auth/verify/${verifyToken}">Verify</a>`)
+
+};
+
+//verification route
+export const verifyUser = async (req, res) => {
+  const token = req.params.token
+  if(!token){
+    return res.sendStatus(400)
+  }
+  let verify = undefined
+  try{
+    verify = jwt.verify(token,process.env.VERIFY_TOKEN_SECRET)
+  }catch(err){
+    return res.sendStatus(403)
+  }
+
+  try{
+    const emailVerified = await User.findOne({email: verify.email})
+    if(emailVerified){
+      return res.status(400).json({msg: 'Email already verified'})
+    }
+  }catch(err){
+    console.log(err);
+    return res.sendStatus(500)
+  }
+
+  const user = new User(verify);
 
   try {
     const savedUser = await user.save();
     res.json({ _id: savedUser._id });
   } catch (error) {
-    res.status(500).json(error);
+    return res.status(500).json(error);
   }
 };
 
+//login route
 export const login = async (req, res) => {
   // res.json({ msg: "Login" });
 
