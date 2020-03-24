@@ -1,8 +1,17 @@
 {
     "presets": [
-        "env"
+      [
+        "@babel/env",
+        {
+          "exclude": [
+            "@babel/transform-async-to-generator",
+            "@babel/transform-regenerator"
+          ]
+        }
+      ]
     ],
     "plugins": [
-        "transform-object-rest-spread"
+      "@babel/plugin-proposal-object-rest-spread"
     ]
-}
+  }
+  

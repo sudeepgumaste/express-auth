@@ -48,7 +48,7 @@ export const register = async (req, res) => {
   );
 
   //mail the token to user
-  sendMail(req.body.email,'Verify your account', `<a href="http://127.0.0.1:3000/api/auth/verify/${verifyToken}">Verify</a>`)
+  sendMail(req.body.email,'Verify your account', `<a href="${process.env.HOSTED_URL}:${process.env.PORT}/api/auth/verify/${verifyToken}">Verify</a>`)
 
 };
 
@@ -71,7 +71,7 @@ export const verifyUser = async (req, res) => {
       return res.status(400).json({msg: 'Email already verified'})
     }
   }catch(err){
-    console.log(err);
+    // console.log(err);
     return res.sendStatus(500)
   }
 
