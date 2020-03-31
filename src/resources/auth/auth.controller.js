@@ -7,7 +7,14 @@ import jwt, { verify } from "jsonwebtoken";
 import bcrypt from "bcrypt";
 import { RefreshToken } from "../../models/refreshtoken.model";
 
+import redis from 'redis';
+
 import {sendMail} from '../../utils/mail/sendMail';
+
+
+const {REDIS_PORT = 6379} = process.env;
+// redis cache for storing temporary signup requests until verified
+const redisClient = redis.createClient(REDIS_PORT)
 
 //registration route
 export const register = async (req, res) => {
@@ -34,22 +41,31 @@ export const register = async (req, res) => {
   const salt = await bcrypt.genSalt(10);
   const hashedPassword = await bcrypt.hash(req.body.password, salt);
 
-  //create an verify token to mail to users
-  const verifyToken = jwt.sign(
+  //create a user object and temporarily store it in redis cache
+ 
+  const userObject = JSON.stringify({
+    name: req.body.name,
+    email: req.body.email,
+    password: hashedPassword
+  })
+  
+  // store the object for 15m
+  redisClient.setex(req.body.email,900, userObject)
+
+  const verificationToken = jwt.sign(
     {
-      name: req.body.name,
-      email: req.body.email,
-      password: hashedPassword
+      email : req.body.email
     },
     process.env.VERIFY_TOKEN_SECRET,
     {
       expiresIn: "15m"
     }
-  );
+  )
 
   //mail the token to user
-  sendMail(req.body.email,'Verify your account', `<a href="${process.env.HOSTED_URL}:${process.env.PORT}/api/auth/verify/${verifyToken}">Verify</a>`)
-
+  sendMail(req.body.email,'Verify your account', `<a href="${process.env.HOSTED_URL}:${process.env.PORT}/api/auth/verify/${verificationToken}">Verify</a>`)
+  // console.log(`${process.env.HOSTED_URL}:${process.env.PORT}/api/auth/verify/${verificationToken}`)
+  res.json({"msg" : "Verification sent to email"})
 };
 
 //verification route
@@ -58,7 +74,7 @@ export const verifyUser = async (req, res) => {
   if(!token){
     return res.sendStatus(400)
   }
-  let verify = undefined
+  let verify = null
   try{
     verify = jwt.verify(token,process.env.VERIFY_TOKEN_SECRET)
   }catch(err){
@@ -75,14 +91,21 @@ export const verifyUser = async (req, res) => {
     return res.sendStatus(500)
   }
 
-  const user = new User(verify);
-
-  try {
-    const savedUser = await user.save();
-    res.json({ _id: savedUser._id });
-  } catch (error) {
-    return res.status(500).json(error);
-  }
+  const cachedData = redisClient.get(verify.email,async (err, data)=>{
+    if(err){
+      res.status(500).json({"err":"Internal server error"})
+    }else{
+      const userData = JSON.parse(data);
+      const user = new User(userData);
+      redisClient.del(verify.email);
+      try {
+        const savedUser = await user.save();
+        res.json({msg: "Successfully verified"});
+      } catch (error) {
+        return res.status(500).json(error);
+      }
+    }
+  })
 };
 
 //login route
