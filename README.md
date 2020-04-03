@@ -1,4 +1,5 @@
 # Express Authenticaiton using JWT
+
 ### How to use
 - Run this commands in terminal to install the dependencies
 
@@ -22,6 +23,13 @@
     MAIL_PASSWORD=[Gmail app password]
     ```
 - Add verifyToken function from resources/auth/auth.middleware.js as middleware for protected routes
+
+### Other dependencies
+- ### Redis
+    User objects are cached in redis store for 15min or until they've been verified
+
+    Installation files can be found here:    
+    - https://redis.io/download
 
 ### Scripts available
 - To start development server

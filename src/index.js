@@ -3,12 +3,15 @@ import dotenv from 'dotenv';
 import process from 'process';
 import { router } from './router';
 import mongoose from 'mongoose';
+import cors from 'cors'
 
 //configuring environment
 dotenv.config();
 
 //create express app
 const app = express();
+
+app.use(cors())
 
 //db connection
 mongoose.connect(
