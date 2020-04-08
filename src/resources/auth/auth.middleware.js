@@ -12,7 +12,11 @@ export const verifyToken = (req, res, next) => {
   }
 
   try {
-    const verified = jwt.verify(token, process.env.ACCESS_TOKEN_SECRET);
+    const verified = jwt.verify(
+      token, 
+      process.env.ACCESS_TOKEN_SECRET,
+      { algorithms : ['HS256'] }
+    );
     // console.log("verified:", verified);
     req.user = verified;
     next();
