@@ -24,6 +24,17 @@
     ```
 - Add verifyToken function from resources/auth/auth.middleware.js as middleware for protected routes
 
+### Dependencies
+-  express - ``` REST API Framework ```
+-  @hapi/joi - ``` Input validation ```
+-  bcrypt - ``` Password hashing ```
+-  cors - ``` Enable CORS ```
+-  dotenv - ``` Configuring environment variables ```
+-  jsonwebtoken - ``` JWT Authorisation ```
+-  mongoose - ``` MongoDB ODM ```
+-  nodemailer - ``` Send email ```
+-  redis - ``` Client to connect to redis server ```
+
 ### Other dependencies
 - ### Redis
     User objects are cached in redis store for 15min or until they've been verified
