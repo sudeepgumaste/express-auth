@@ -2,3 +2,4 @@ node_modules
 dist
 .env
 requests.rest
+requests.log
